@@ -70,6 +70,10 @@ def evaluate(dataset):
     correct = 0
     accepted_ids = []
     rejected_ids = []
+    true_positives = 0
+    false_positives = 0
+    false_negatives = 0
+    true_negatives = 0
 
     for id_, features, label in dataset:
         pred = predict(features)
@@ -77,10 +81,23 @@ def evaluate(dataset):
             correct += 1
         if pred == 1:
             accepted_ids.append(id_)
+            if label == 1:
+                true_positives += 1
+            else:
+                false_positives += 1
         else:
             rejected_ids.append(id_)
+            if label == 0:
+                true_negatives += 1
+            else:
+                false_negatives += 1
 
     accuracy = correct / len(dataset)
+    
+    # Calculate precision, recall, and F1-score
+    precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
+    recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
+    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
     print("\n=== Prediction Summary ===")
     print(f"Jumlah ID yang layak diterima = {len(accepted_ids)}")
@@ -88,14 +105,26 @@ def evaluate(dataset):
     print(f"Jumlah ID yang tidak layak diterima = {len(rejected_ids)}")
     print("ID yang ditolak =", ", ".join(rejected_ids))
 
-    return accuracy
+    print("\n=== Evaluation Metrics ===")
+    print(f"Akurasi: {accuracy * 100:.2f}%")
+    print(f"Presisi: {precision * 100:.2f}%")
+    print(f"Recall: {recall * 100:.2f}%")
+    print(f"F1-Score: {f1_score * 100:.2f}%")
+    
+    print("\n=== Confusion Matrix ===")
+    print(f"True Positives (TP): {true_positives}")
+    print(f"False Positives (FP): {false_positives}")
+    print(f"True Negatives (TN): {true_negatives}")
+    print(f"False Negatives (FN): {false_negatives}")
+
+    return accuracy, f1_score
 
 # Load dan preprocessing data
 header, raw_data = read_csv("loan_data.csv")
 data = preprocess(raw_data, header)
 train_data, test_data = split_data(data)
 
-# Gunakan fitur tetap: Credit_History (index 8), dan Property_Area (index 9)
+# Gunakan fitur tetap: Credit_History (index 8), dan Income_High (>=7000, index 4)
 root_feature = 8
 second_feature = 4
 
@@ -130,10 +159,11 @@ def predict(features):
         return left_1 if features[second_feature] == 1 else left_0
 
 # Evaluasi dan cetak
-acc_test = evaluate(test_data)
+acc_test, f1_test = evaluate(test_data)  # Modified to receive both metrics
 
 print("\n=== Model Evaluation ===")
 print("Decision Tree Depth-2 Accuracy:", round(acc_test * 100, 2), "%")
+print("Decision Tree Depth-2 F1-Score:", round(f1_test * 100, 2), "%")
 
 print("\n=== Decision Tree Structure ===")
 print(f"Root Feature Index: {root_feature} -> 'Credit_History'")
